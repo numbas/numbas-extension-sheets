@@ -1,9 +1,13 @@
+function boolish_attribute(v) {
+    return v !== null && ['false','no'].indexOf(v.toLowerCase().trim()) == -1;
+}
+
 class SheetElement extends HTMLElement {
-    static get observedAttributes() { return ['editable']; }
+    static get observedAttributes() { return ['disabled']; }
 
     constructor() {
         super();
-        this.attachShadow({mode:'open'});
+        //this.attachShadow({mode:'open'});
 
         this.app_created = new Promise((resolve,reject) => {
             this.resolve_app_created = resolve;
@@ -16,17 +20,31 @@ class SheetElement extends HTMLElement {
         }
     }
 
-    try_create() {
-        const {shadowRoot} = this;
+    attributeChangedCallback(name, oldValue, newValue) {
+        if(name == 'disabled') {
+            this.disabled_changed(newValue);
+        }
+    }
 
+    async disabled_changed(disabled) {
+        console.log('disabled',disabled, boolish_attribute(disabled));
+        await this.app_created;
+        this.app.ports.receive_attributes.send({disabled: boolish_attribute(disabled)});
+    }
+
+    try_create() {
+        const root = this;
+
+        /*
         const link = document.createElement('link');
         link.setAttribute('rel','stylesheet');
         link.setAttribute('href',Numbas.getStandaloneFileURL('sheets','style.css'));
         shadowRoot.appendChild(link);
+        */
 
         const container = document.createElement('div');
-        shadowRoot.appendChild(container)
-        shadowRoot.addEventListener('mousemove', e => {
+        root.appendChild(container)
+        root.addEventListener('mousemove', e => {
             let el = e.target;
             while(el && !el.hasAttribute('data-annotated-mousemove')) {
                 el = el.parentElement;
@@ -39,7 +57,7 @@ class SheetElement extends HTMLElement {
                 {x: e.x, y: e.y, box: box}
             }));
         });
-        shadowRoot.addEventListener('keydown', e => {
+        root.addEventListener('keydown', e => {
             const {target} = e;
             const {selectionStart, selectionEnd} = target;
             if(!target.classList.contains('input-value')) {
@@ -84,7 +102,7 @@ class SheetElement extends HTMLElement {
                 }
             });
         });
-        mutation_observer.observe(shadowRoot, {childList: true, subtree: true, attributes: true, attributeFilter: ['data-input-active']});
+        mutation_observer.observe(root, {childList: true, subtree: true, attributes: true, attributeFilter: ['data-input-active']});
 
         this.app = Elm.Spreadsheet.init({node: container, flags: {}});
 

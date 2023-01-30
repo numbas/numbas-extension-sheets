@@ -4127,6 +4127,9 @@ if(typeof cs !== 'string') cs = encode_cell((cs));
 	if(typeof ce !== 'string') ce = encode_cell((ce));
 return cs == ce ? cs : cs + ":" + ce;
 }
+/** Decode a reference across sheets.
+ *  Returns a range object with an additional `sheet` property giving the name of the sheet.
+ */
 function dereference_range(range) {
     const m = range.match(/(?:(.*?)!)?\$?([A-Za-z]+)\$?(\d+)(?::\$([A-Za-z]+)\$(\d+))?/);
     if(!m) {

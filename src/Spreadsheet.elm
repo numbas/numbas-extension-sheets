@@ -18,6 +18,7 @@ ff = String.fromFloat
 tf = toFloat
 
 port receive_spreadsheet : (JE.Value -> msg) -> Sub msg
+port receive_attributes : (JE.Value -> msg) -> Sub msg
 port send_spreadsheet : JE.Value -> Cmd msg
 
 spreadsheet_updated : Model -> (Model, Cmd Msg)
@@ -61,15 +62,19 @@ type alias Model =
     , pressing : Maybe Coords
     , selection : Maybe Range
     , hover_cell : Maybe (Range, Coords)
+    , disabled : Bool
     }
 
 type alias SpreadsheetContext = 
     { selection : Maybe Range
+    , disabled : Bool
     }
 
 
 type Msg
     = Noop
+    | InvalidPortMessage JD.Value
+    | SetDisabled Bool
     | ReceiveSpreadsheet JD.Value
     | AddRowBefore Int
     | AddColumnBefore Int
@@ -108,6 +113,7 @@ init_model =
     , pressing = Nothing
     , selection = Nothing
     , hover_cell = Nothing
+    , disabled = False
     }
 
 nocmd model = (model, Cmd.none)
@@ -115,9 +121,11 @@ nocmd model = (model, Cmd.none)
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model = case msg of
     Noop -> nocmd model
+    InvalidPortMessage _ -> model |> nocmd
+    SetDisabled disabled -> { model | disabled = disabled } |> nocmd
     ReceiveSpreadsheet v -> 
         case JD.decodeValue decode_spreadsheet v of
-            Ok spreadsheet -> { init_model | spreadsheet = spreadsheet } |> spreadsheet_updated
+            Ok spreadsheet -> { init_model | spreadsheet = spreadsheet, disabled = model.disabled } |> spreadsheet_updated
             Err err -> model |> nocmd
     AddRowBefore row -> update_spreadsheet (add_row_before row) model |> spreadsheet_updated
     AddColumnBefore column -> update_spreadsheet (add_column_before column) model |> spreadsheet_updated
@@ -169,7 +177,19 @@ subscriptions model = Sub.batch
     [ Browser.Events.onMouseUp (JD.succeed MouseUp)
     , Browser.Events.onClick (JD.succeed ClickOutside)
     , receive_spreadsheet ReceiveSpreadsheet
+    , receive_attributes decode_received_attribute
     ]
+
+decode_received_attribute : JE.Value -> Msg
+decode_received_attribute v = 
+    v
+    |>
+    JD.decodeValue (
+        JD.oneOf
+        [ JD.field "disabled" JD.bool |> JD.map SetDisabled
+        ]
+    )
+    |> Result.withDefault (InvalidPortMessage v)
 
 selected_cells : Model -> List (Range, CellContent)
 selected_cells model = case model.selection of
@@ -178,7 +198,7 @@ selected_cells model = case model.selection of
 
 view model = 
     let
-        context = { selection = model.selection }
+        context = { selection = model.selection, disabled = model.disabled }
     in
         div
             []
@@ -259,6 +279,8 @@ view_cell context range cell =
             , HE.on "cellleft" (JD.succeed <| MoveSelection (-1,0))
             , HE.on "cellright" (JD.succeed <| MoveSelection (1,0))
             ]
+
+        disabled = cell.disabled || context.disabled
     in
         Html.td
             ( ((List.map (\(k,v) -> HA.style k v)) cell.style)
@@ -279,7 +301,7 @@ view_cell context range cell =
               ]
             )
 
-            ( if cell.disabled then
+            ( if disabled then
                 [ Html.div
                     (   [ HA.attribute "tabindex" "0"
                         , HA.class "input-value disabled"

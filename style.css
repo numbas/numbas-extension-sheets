@@ -1,13 +1,10 @@
-* {
-    box-sizing: border-box;
-}
-table {
+spread-sheet table {
     border-spacing: 0;
     font-family: sans-serif;
     /*! border-collapse: collapse; */
 }
 
-td {
+spread-sheet td {
     margin: 0;
     padding: 0;
     border: 1px solid #ccc;
@@ -15,11 +12,11 @@ td {
     vertical-align: top;
 }
 
-td.in-selection {
+spread-sheet td.in-selection {
     background: hsl(120,40%,90%);
 }
 
-td > .input-value {
+spread-sheet td > .input-value {
     background: none;
     border: none;
     font-family: inherit;
@@ -30,13 +27,13 @@ td > .input-value {
     resize: none;
     line-height: 1em;
 }
-td > textarea.input-value {
+spread-sheet td > textarea.input-value {
     border: none;
 
     font-family: inherit;
     resize: none;
 }
-td > textarea.input-value {
+spread-sheet td > textarea.input-value {
     color: inherit;
     font-style: inherit;
     font-weight: inherit;
