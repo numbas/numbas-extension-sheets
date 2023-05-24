@@ -27,7 +27,6 @@ class SheetElement extends HTMLElement {
     }
 
     async disabled_changed(disabled) {
-        console.log('disabled',disabled, boolish_attribute(disabled));
         await this.app_created;
         this.app.ports.receive_attributes.send({disabled: boolish_attribute(disabled)});
     }
@@ -107,7 +106,7 @@ class SheetElement extends HTMLElement {
         this.app = Elm.Spreadsheet.init({node: container, flags: {}});
 
         this.app.ports.send_spreadsheet.subscribe(data => {
-            this.dispatchEvent(new CustomEvent('change', {detail: {sheet: data}}));
+            this.dispatchEvent(new CustomEvent('sheetchange', {detail: {sheet: data}}));
         });
 
         this.resolve_app_created(this.app);

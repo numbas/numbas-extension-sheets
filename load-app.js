@@ -13,8 +13,9 @@ async function init_app() {
     spreadsheet.setAttribute('disabled',true);
     main.appendChild(spreadsheet);
 
-    const d = await (await fetch('examples/level-pegs-on-water-main.xlsx')).arrayBuffer();
+    const d = await (await fetch('examples/planck-wavelength.xlsx')).arrayBuffer();
     const wb = XLSX.read(d, {sheetStubs:true});
+    console.log(wb);
     const sheet = Object.values(wb['Sheets'])[0];
     spreadsheet.load_worksheet(sheet)
 

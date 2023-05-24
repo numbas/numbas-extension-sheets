@@ -1,7 +1,7 @@
 spread-sheet table {
     border-spacing: 0;
     font-family: sans-serif;
-    /*! border-collapse: collapse; */
+    border-collapse: initial !important;
 }
 
 spread-sheet td {

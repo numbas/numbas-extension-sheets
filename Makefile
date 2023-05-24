@@ -3,11 +3,13 @@ EDITOR_EXTENSION_PATH = ~/numbas/editor/media/user-extensions/extracted/47/sheet
 
 ELMS=$(wildcard src/*.elm)
 
-extension: sheets.js $(EDITOR_EXTENSION_PATH)/style.css
+extension: $(EDITOR_EXTENSION_PATH)/sheets.js $(EDITOR_EXTENSION_PATH)/style.css
+
+$(EDITOR_EXTENSION_PATH)/sheets.js: sheets.js
+	cp $^ $@
 
 sheets.js: src/extension.js dist/sheet_element.js dist/xlsx.js
 	cat $^ > $@
-	cp $@ $(EDITOR_EXTENSION_PATH)
 
 $(EDITOR_EXTENSION_PATH)/style.css: style.css
 	cp $^ $@

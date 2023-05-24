@@ -1,6 +1,24 @@
 Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx'], function(sheets) {
     const jme = Numbas.jme;
 
+    /** Encode a UInt8Array as a base64 string.
+     *
+     * @param {UInt8Array} data
+     * @returns {string}
+     */
+    function encode_array(data) {
+        return btoa(String.fromCharCode(...new Uint8Array(data)));
+    }
+
+    /** Decode a base64-encoded string to an UInt8Array.
+     *
+     * @param {string} base64
+     * @returns {UInt8Array}
+     */
+    function decode_array(base64) {
+        return Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+    }
+
     /** A spreadsheet editor widget for a part.
      *
      * @param {Element} element - The parent element of the widget.
@@ -22,7 +40,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             var sheet = this.sheet = document.createElement('spread-sheet');
             element.appendChild(sheet);
 
-            sheet.addEventListener('change', e => {
+            sheet.addEventListener('sheetchange', e => {
                 this.changing = true;
                 const wb = this.options.initial_sheet.copy();
                 wb.replace_worksheet(e.detail.sheet);
@@ -41,7 +59,6 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         }
 
         setAnswerJSON(answerJSON) {
-            console.log('set answer',this.sheet,answerJSON);
             if(answerJSON.value === undefined) {
                 return;
             }
@@ -94,13 +111,26 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             this.wb = wb;
         }
 
+        default_sheetname() {
+            if(this.wb && this.wb.SheetNames) {
+                return this.wb.SheetNames[0];
+            }
+        }
+
         get_worksheet(name) {
-            return this.wb.Sheets[name || this.wb.SheetNames[0]];
+            if(!this.wb.Sheets) {
+                return;
+            }
+            return this.wb.Sheets[name || this.default_sheetname()];
         }
 
         replace_worksheet(sheet, name) {
-            name = name || this.wb.SheetNames[0];
+            name = name || this.default_sheetname()
             this.wb.Sheets[name] = sheet;
+        }
+
+        worksheet_names() {
+            return this.wb?.SheetNames || [];
         }
 
         copy() {
@@ -117,7 +147,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
 
             if('!merges' in ws) {
                 const corner = ws['!merges'].find(range => {
-                    const r = XLSX.utils.decode_range(range);
+                    const r = typeof range == 'string' ? XLSX.utils.decode_range(range) : range;
                     if(r.s.c<=col && r.s.r<=row && r.e.c>=col && r.e.r>=row) {
                         return XLSX.utils.encode_cell(r.s);
                     }
@@ -142,13 +172,14 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
                         corner = ref;
                     } else if('!merges' in ws) {
                         corner = this.find_corner(ws,ref);
-                    }
-                    if(!corner) {
+                    } else {
                         corner = ref;
-                        ws[ref] = {t:'z',v:''};
+                    }
+                    if(!ws[corner]) {
+                        ws[corner] = {t:'z',v:''};
                     }
 
-                    Object.assign(ws[ref],changes);
+                    Object.assign(ws[corner],changes);
                 }
             }
             return wb;
@@ -172,12 +203,32 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
                     if(ws[ref]===undefined) {
                         ws[ref] = {t:'z',v:''};
                     }
-                    if(ws[ref].t=='z') {
-                        ws[ref].t = 's';
+                    let t = 's';
+                    if(typeof value == 'number') {
+                        t = 'n';
                     }
+                    ws[ref].t = t;
                     ws[ref].v = value;
                 }
             }
+            return wb;
+        }
+
+        /** Return a new workbook containing only the given range.
+         */
+        slice(range_string) {
+            const wb = this.copy();
+            const ws = wb.get_worksheet();
+            const range = XLSX.utils.decode_range(range_string);
+            const os = {'!ref': range_string, '!merges': ws['!merges']};
+            Object.entries(ws).forEach(([k,v]) => {
+                const p = XLSX.utils.decode_cell(k);
+                if(p.c<range.s.c || p.c>range.e.c || p.r<range.s.r || p.r>range.e.r) {
+                    return;
+                }
+                os[k] = v;
+            });
+            wb.wb['Sheets'][wb.wb.SheetNames[0]] = os;
             return wb;
         }
 
@@ -244,6 +295,14 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         { unwrapValues: true}
     ));
 
+    sheets.scope.addFunction(new jme.funcObj('spreadsheet_from_base64_file', ['string', 'string'], TSpreadsheet,
+        (filename, base64) => {
+            const data = decode_array(base64);
+            return new TSpreadsheet(new Workbook(XLSX.read(data, {sheetStubs: true})));
+        },
+        { unwrapValues: true }
+    ))
+
     sheets.scope.addFunction(new jme.funcObj('spreadsheet_from_workbook',['dict'], TSpreadsheet, 
         (workbook) => {
             return new TSpreadsheet(new Workbook(workbook));
@@ -269,7 +328,32 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         {unwrapValues: true}
     ));
 
-    sheets.scope.addFunction(new jme.funcObj('fill_range',[TSpreadsheet,TString,'list of list of string'], TSpreadsheet,
+    sheets.scope.addFunction(new jme.funcObj('disable_cells',[TSpreadsheet,'list of string'], TSpreadsheet,
+        (spreadsheet, range_strings) => {
+            let wb = spreadsheet;
+            for(let range_string of range_strings) {
+                wb = wb.update_range(range_string, {'disabled':true});
+            }
+            return new TSpreadsheet(wb);
+        },
+        {unwrapValues: true}
+    ));
+
+    sheets.scope.addFunction(new jme.funcObj('fill_range',[TSpreadsheet,TString,'list of (string or number)'], TSpreadsheet,
+        (spreadsheet, range, values) => {
+            const drange = XLSX.utils.decode_range(range);
+            if(drange.e.c == drange.s.c) {
+                values = values.map(x => [x]);
+            } else if(drange.e.r == drange.s.r) {
+                values = [values];
+            } else {
+                throw(new Numbas.Error("The values for a 2D range must be a list of lists."));
+            }
+            return new TSpreadsheet(spreadsheet.fill_range(range,values));
+        },
+        {unwrapValues: true}
+    ));
+    sheets.scope.addFunction(new jme.funcObj('fill_range',[TSpreadsheet,TString,'list of list of (string or number)'], TSpreadsheet,
         (spreadsheet, range, values) => {
             return new TSpreadsheet(spreadsheet.fill_range(range,values));
         },
@@ -288,6 +372,10 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             return out;
         }
     ));
+
+    sheets.scope.addFunction(new jme.funcObj('slice', [TSpreadsheet, TString], TSpreadsheet, (wb,range) => {
+        return wb.slice(range);
+    }));
 
     sheets.scope.addFunction(new jme.funcObj('listval', [TSpreadsheet, TString], '?', null, {
         evaluate: function(args, scope) {
@@ -330,4 +418,91 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             }
         }
     }));
+
+    if(Numbas.editor?.register_variable_template_type !== undefined) {
+        class SpreadsheetVariableTemplateWidget extends HTMLElement {
+            static get observedAttributes() { return ['value']; }
+
+            constructor() {
+                super();
+                this.attachShadow({mode:'open'});
+
+                const template = `
+                <style>
+                    .container:not(.got-value) .when-got-value, .container.got-value .when-no-value {
+                        display: none;
+                    }
+                </style>
+                <div class="container">
+                    <p id="got-value-message" class="when-got-value"><code id="filename">Spreadsheet</code> <a id="download">Download</a></p>
+                    <label for="file-upload"><span class="when-no-value">Upload a file</span><span class="when-got-value">Replace with a different file</span>:</label> <input type="file" id="file-upload">
+                </div>
+                `;
+                this.shadowRoot.innerHTML = template;
+
+                const input = this.shadowRoot.querySelector('#file-upload');
+
+                input.addEventListener('change', async e => {
+                    const [file] = input.files;
+                    if(!file) {
+                        return;
+                    }
+
+                    const data = await file.arrayBuffer();
+                    const file_info = {
+                        filename: file.name,
+                        base64: encode_array(data)
+                    };
+                    this.set_value(file_info);
+
+                    this.dispatchEvent(new CustomEvent('change', {detail: {value: file_info}}));
+                });
+            }
+
+            set_value(file_info) {
+                const filename_display = this.shadowRoot.querySelector('#got-value-message #filename');
+                const download_link = this.shadowRoot.querySelector('#got-value-message #download');
+                this.value = file_info;
+                if(file_info) {
+                    filename_display.textContent = file_info.filename;
+                    const array = decode_array(file_info.base64);
+                    download_link.setAttribute('href', URL.createObjectURL(new Blob([array])));
+                    download_link.setAttribute('download', file_info.filename);
+                } else {
+                    filename_display.textContent = `Nothing`;
+                    download_link.removeAttribute('href');
+                    download_link.removeAttribute('download');
+                }
+                this.shadowRoot.querySelector('.container').classList.toggle('got-value', !!file_info);
+            }
+        }
+        window.customElements.define('variable-template-spreadsheet', SpreadsheetVariableTemplateWidget);
+
+        Numbas.editor.register_variable_template_type(function(value) {
+            return {
+                id: 'spreadsheet', 
+                name: 'Spreadsheet file',
+                value: value,
+                load_definition(definition) {
+                    var tree = Numbas.jme.compile(definition);
+                    if(!tree.args || tree.tok.type == 'nothing') {
+                        this.value(null);
+                    } else {
+                        var filename = Numbas.jme.builtinScope.evaluate(tree.args[0]).value;
+                        var base64 = Numbas.jme.builtinScope.evaluate(tree.args[1]).value;
+                        this.value({filename, base64});
+                    }
+                },
+                jme_definition() {
+                    const v = this.value();
+                    if(v === null) {
+                        return 'nothing';
+                    }
+                    return 'spreadsheet_from_base64_file(safe("'+Numbas.jme.escape(v.filename)+'"), safe("'+Numbas.jme.escape(v.base64)+'"))'
+                },
+                widget: SpreadsheetVariableTemplateWidget
+            }
+        });
+
+    }
 });

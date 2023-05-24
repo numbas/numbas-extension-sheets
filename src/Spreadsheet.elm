@@ -483,12 +483,18 @@ decode_spreadsheet =
 
 decode_range : JD.Decoder Range
 decode_range = 
-    JD.string
-    |> JD.andThen (\s ->
-        case P.run parse_range s of
-            Ok r -> JD.succeed r
-            Err _ -> JD.fail <| "invalid range: "++s
-        )
+    JD.oneOf
+        [ JD.string
+            |> JD.andThen (\s ->
+                case P.run parse_range s of
+                    Ok r -> JD.succeed r
+                    Err _ -> JD.fail <| "invalid range: "++s
+                )
+
+        , JD.map2 pair
+            (JD.field "s" decode_coords_object)
+            (JD.field "e" decode_coords_object)
+        ]
 
 decode_coords : JD.Decoder Coords
 decode_coords = 
@@ -498,6 +504,12 @@ decode_coords =
             Ok c -> JD.succeed c
             Err _ -> JD.fail <| "invalid coords: "++s
         )
+
+decode_coords_object : JD.Decoder Coords
+decode_coords_object =
+    JD.map2 pair
+        (JD.field "c" JD.int)
+        (JD.field "r" JD.int)
 
 decode_spreadsheet_content : JD.Decoder (List (Coords, CellContent))
 decode_spreadsheet_content = 
