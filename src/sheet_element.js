@@ -68,24 +68,28 @@ class SheetElement extends HTMLElement {
             const atEnd = disabled || (collapsed && selectionEnd == target.value.length);
             switch(e.key) {
                 case 'ArrowUp':
+                    e.preventDefault();
                     if(atStart) {
                         target.blur();
                         target.dispatchEvent(new CustomEvent('cellup'));
                     }
                     break;
                 case 'ArrowDown':
+                    e.preventDefault();
                     if(atEnd) {
                         target.blur();
                         target.dispatchEvent(new CustomEvent('celldown'));
                     }
                     break;
                 case 'ArrowLeft':
+                    e.preventDefault();
                     if(atStart) {
                         target.blur();
                         target.dispatchEvent(new CustomEvent('cellleft'));
                     }
                     break;
                 case 'ArrowRight':
+                    e.preventDefault();
                     if(atEnd) {
                         target.blur();
                         target.dispatchEvent(new CustomEvent('cellright'));
