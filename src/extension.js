@@ -359,7 +359,21 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         },
         {unwrapValues: true}
     ));
+    sheets.scope.addFunction(new jme.funcObj('fill_ranges',[TSpreadsheet,'list'], TSpreadsheet,
+        (spreadsheet, values) => {
+            let s = spreadsheet;
+            for(let v of values) {
+                const range = v[0];
+                const values = v[1];
+                s = s.fill_range(range, values);
+            }
+            return new TSpreadsheet(s);
+        },
+        {unwrapValues: true}
+    ));
 
+    /** Interpret a range string and return a list of the cells it contains.
+     */
     sheets.scope.addFunction(new jme.funcObj('parse_range',[TString],TList,
         (range_string) => {
             const range = XLSX.utils.decode_range(range_string);
@@ -409,14 +423,18 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
                     out.push(new TList(orow));
                     for(let col=range.s.c; col<=range.e.c; col++) {
                         const v = wb.get_cell_value(sheet, XLSX.utils.encode_cell({r:row,c:col}));
-                        orow.push(new TString(v || ''));
+                        orow.push(new TString((v || '')+''));
                     }
                 }
                 return new TList(out);
             } else {
-                return new TString(wb.get_cell_value(sheet,ref) || '');
+                return new TString((wb.get_cell_value(sheet,ref) || '')+'');
             }
         }
+    }));
+
+    sheets.scope.addFunction(new jme.funcObj('encode_range',['integer','integer','integer','integer'], TString, (cs,rs,ce,re) => {
+        return XLSX.utils.encode_range({s:{c:cs,r:rs}, e:{c:ce,r:re}});
     }));
 
     if(Numbas.editor?.register_variable_template_type !== undefined) {

@@ -13,8 +13,8 @@ async function init_app() {
     spreadsheet.setAttribute('disabled',true);
     main.appendChild(spreadsheet);
 
-    const d = await (await fetch('examples/planck-wavelength.xlsx')).arrayBuffer();
-    const wb = XLSX.read(d, {sheetStubs:true});
+    const d = await (await fetch('examples/currency.xlsx')).arrayBuffer();
+    const wb = XLSX.read(d, {sheetStubs:true, cellNF: true});
     console.log(wb);
     const sheet = Object.values(wb['Sheets'])[0];
     spreadsheet.load_worksheet(sheet)
