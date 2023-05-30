@@ -446,7 +446,7 @@ parse_coords =
      |= P.int
 
 parse_range : Parser Range
-parse_range=
+parse_range =
     P.succeed pair
     |= parse_coords
     |. P.symbol ":"
@@ -568,9 +568,9 @@ decode_border_side side =
 decode_border_size =
     JD.string
     |> JD.andThen (\s -> case s of
-        "thin" -> JD.succeed "0.1em"
-        "medium" -> JD.succeed "0.2em"
-        "thick" -> JD.succeed "0.3em"
+        "thin" -> JD.succeed "0.1rem"
+        "medium" -> JD.succeed "0.2rem"
+        "thick" -> JD.succeed "0.3rem"
         _ -> JD.fail <| "Invalid border size: "++s
        )
     |> JD.map (\s -> ("width",s))
@@ -579,12 +579,14 @@ decode_border_size =
 decode_color : JD.Decoder String
 decode_color = 
     JD.oneOf
-        [JD.field "rgb" JD.string |> JD.map (\c -> 
+        [ JD.field "rgb" JD.string |> JD.map (\c -> 
             if String.length c == 8 then 
                 "#"++(String.slice 2 8 c)++(String.slice 0 2 c)
             else
                 "#"++c
-         )]
+          )
+        , JD.field "css" JD.string
+        ]
 
 decode_bool_int_field name v = 
     JD.field name 
