@@ -341,7 +341,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         {unwrapValues: true}
     ));
 
-    sheets.scope.addFunction(new jme.funcObj('fill_range',[TSpreadsheet,TString,'list of (string or number)'], TSpreadsheet,
+    sheets.scope.addFunction(new jme.funcObj('fill_range',[TSpreadsheet, TString, 'list of (string or number)'], TSpreadsheet,
         (spreadsheet, range, values) => {
             const drange = XLSX.utils.decode_range(range);
             if(drange.e.c == drange.s.c) {
@@ -358,18 +358,6 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
     sheets.scope.addFunction(new jme.funcObj('fill_range',[TSpreadsheet,TString,'list of list of (string or number)'], TSpreadsheet,
         (spreadsheet, range, values) => {
             return new TSpreadsheet(spreadsheet.fill_range(range,values));
-        },
-        {unwrapValues: true}
-    ));
-    sheets.scope.addFunction(new jme.funcObj('fill_ranges',[TSpreadsheet,'list'], TSpreadsheet,
-        (spreadsheet, values) => {
-            let s = spreadsheet;
-            for(let v of values) {
-                const range = v[0];
-                const values = v[1];
-                s = s.fill_range(range, values);
-            }
-            return new TSpreadsheet(s);
         },
         {unwrapValues: true}
     ));
@@ -438,6 +426,70 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
     sheets.scope.addFunction(new jme.funcObj('encode_range',['integer','integer','integer','integer'], TString, (cs,rs,ce,re) => {
         return XLSX.utils.encode_range({s:{c:cs,r:rs}, e:{c:ce,r:re}});
     }));
+
+    function add_style_function(name,args,fn) {
+        args = args.slice();
+        sheets.scope.addFunction(new jme.funcObj(name, args, TDict, function(...args) {
+            var style = fn(...args);
+            return jme.wrapValue({style: style});
+        },{unwrapValues: true}));
+
+        var dargs = args.slice();
+        dargs.splice(0,0,'dict');
+        sheets.scope.addFunction(new jme.funcObj(name, dargs, TDict, function(pd,...args) {
+            var style = fn(...args);
+            return jme.wrapValue(Numbas.util.deep_extend_object(pd,{style: style}));
+        },{unwrapValues: true}));
+    }
+
+    function css_color_to_rgba(color) {
+        const d = document.createElement('div');
+        document.body.appendChild(d);
+        d.style.fill = color;
+        const rgba = window.getComputedStyle(d).fill;
+        document.body.removeChild(d);
+        let m;
+        if(m = rgba.match(/rgba\((.*),(.*),(.*),(.*)\)/)) {
+            const [r,g,b] = m.slice(1).map(x => (Math.round(parseFloat(x)) % 256).toString(16).padStart(2,'0'));
+            const a = Math.round(Math.min(1,parseFloat(m[4])) * 255).toString(16).padStart(2,'0');
+            return a+r+g+b;
+        } else if(m = rgba.match(/rgb\((.*),(.*),(.*)\)/)) {
+            const [r,g,b] = m.slice(1).map(x => (Math.round(parseFloat(x)) % 256).toString(16).padStart(2,'0'));
+            return r+g+b;
+        }
+    }
+    sheets.css_color_to_rgba = css_color_to_rgba;
+
+    add_style_function('border',['string','string'], (sides, style) => {
+        sides = sides.split(/\s+/);
+
+        const s = {};
+        const style_bits = style.toLowerCase().split(/\s+/);
+        for(let bit of style_bits) {
+            if(bit.match(/thin|medium|thick/i)) {
+                s['style'] = bit;
+            } else {
+                s['color'] = {css: bit};
+            }
+        }
+        return {border: Object.fromEntries(sides.map(side => [side,s]))};
+    });
+    add_style_function('font_style',['string'], (style) => {
+        const bits = style.toLowerCase().split(/\s+/);
+        const o = {};
+        for(let style of ['bold','italic','underline']) {
+            if(bits.contains(style)) {
+                o[style] = true;
+            }
+        }
+        return {font: o};
+    });
+    add_style_function('font_family', ['string'], (font) => { return {font: {name: font}} });
+    add_style_function('font_size', ['number'], (size) => { return {font: {sz: size*11}} });
+    add_style_function('font_color', ['string'], (color) => { return {font: {color: {css: color}}} });
+    add_style_function('bg_color', ['string'], (color) => { return {fill: {fgColor: {css: color} } } });
+    add_style_function('horizontal_alignment',['string'], (alignment) => { return {alignment: {horizontal: alignment}} });
+    add_style_function('vertical_alignment',['string'], (alignment) => { return {alignment: {vertical: alignment}} });
 
     if(Numbas.editor?.register_variable_template_type !== undefined) {
         class SpreadsheetVariableTemplateWidget extends HTMLElement {
