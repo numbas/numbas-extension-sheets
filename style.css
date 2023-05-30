@@ -7,7 +7,7 @@ spread-sheet table {
 spread-sheet td {
     margin: 0;
     padding: 0;
-    border: 1px solid #ccc;
+    border: 1px solid hsla(0,0%,50%,0.4);
     user-select: none;
     vertical-align: top;
 }
