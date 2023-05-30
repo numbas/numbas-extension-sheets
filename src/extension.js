@@ -41,6 +41,10 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             element.appendChild(sheet);
 
             sheet.addEventListener('sheetchange', e => {
+                if(!this.first_change) {
+                    this.first_change = true;
+                    return;
+                }
                 this.changing = true;
                 const wb = this.options.initial_sheet.copy();
                 wb.replace_worksheet(e.detail.sheet);
