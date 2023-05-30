@@ -183,7 +183,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
                         ws[corner] = {t:'z',v:''};
                     }
 
-                    Object.assign(ws[corner],changes);
+                    Numbas.util.deep_extend_object(ws[corner],changes);
                 }
             }
             return wb;
