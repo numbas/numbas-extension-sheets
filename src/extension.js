@@ -294,7 +294,12 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
 
     sheets.scope.addFunction(new jme.funcObj('spreadsheet',['list of list'],TSpreadsheet, 
         (content) => {
-            return new TSpreadsheet(new Workbook(XLSX.utils.aoa_to_sheet(content)));
+            const sheet = XLSX.utils.aoa_to_sheet(content);
+            const workbook = {
+                Sheets: { 'Sheet1': sheet },
+                SheetNames: ['Sheet1']
+            };
+            return new TSpreadsheet(new Workbook(workbook));
         },
         { unwrapValues: true}
     ));
@@ -306,13 +311,6 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         },
         { unwrapValues: true }
     ))
-
-    sheets.scope.addFunction(new jme.funcObj('spreadsheet_from_workbook',['dict'], TSpreadsheet, 
-        (workbook) => {
-            return new TSpreadsheet(new Workbook(workbook));
-        },
-        {unwrapValues: true}
-    ));
 
     sheets.scope.addFunction(new jme.funcObj('update_range',[TSpreadsheet,TString,TDict], TSpreadsheet,
         (spreadsheet, range_string, changes) => {
