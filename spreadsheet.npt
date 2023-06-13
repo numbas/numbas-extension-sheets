@@ -1,0 +1,138 @@
+{
+    "source": {
+        "author": {
+            "name": "Christian Lawson-Perfect"
+        }
+    },
+    "name": "Spreadsheet",
+    "short_name": "spreadsheet",
+    "description": "<p>An editable spreadsheet. Ranges of cells can be disabled, and you can specify ranges of cells to be marked. A cell is marked correct if its value is equal to the value in the expected answer spreadsheet.</p>",
+    "help_url": "",
+    "input_widget": "spread-sheet",
+    "input_options": {
+        "correctAnswer": "settings[\"correct_answer\"]",
+        "hint": {
+            "static": true,
+            "value": ""
+        },
+        "initial_sheet": {
+            "static": false,
+            "value": "disable_cells(settings[\"initial_sheet\"], settings[\"disable_ranges\"])"
+        }
+    },
+    "can_be_gap": true,
+    "can_be_step": true,
+    "marking_script": "correctAnswer:\nsettings[\"correct_answer\"]\n\nmark:\nif(sum(mark_ranges)=0,\n  incorrect(),\n  apply(mark_ranges)\n)\n\ninterpreted_answer:\nstudentAnswer\n\nrange_cells:\nmap(parse_range(ref),ref,values(settings[\"mark_ranges\"]))\n\ntotal_cells:\nlen(flatten(range_cells))\n\nrange_weights:\nswitch(\n  settings[\"marking_method\"]=\"per_cell\",\n    map(len(r)/total_cells, r, range_cells),\n  // otherwise, mark per range\n    repeat(1/len(range_cells), len(range_cells))\n)\n\nmark_ranges:\nmap(\n  let(\n    range_credit,\n      sum(map(\n        let(\n          correctCellString, correctAnswer[c],\n          correctCellNumber, parsenumber(correctCellString, notation_styles),\n          studentCellString, studentAnswer[c],\n          studentCellNumber, parsenumber(studentCellString, notation_styles),\n          award(\n            1/len(cells), \n            if(isnan(correctCellNumber) and correctCellString<>\"\",\n              lower(correctCellString) = lower(studentCellString),\n              abs(studentCellNumber - if(isnan(correctCellNumber),0,correctCellNumber)) <= settings[\"tolerance\"]\n            )\n          )\n        ),\n        c,\n        cells\n      )),\n    message,\n      switch(\n        range_credit=0,\n          if(len(cells)=1, \"This entry is incorrect.\", \"All entries in this range are incorrect.\"),\n        range_credit=1,\n          if(len(cells)=1, \"This entry is correct.\", \"All entries in this range are correct.\"),\n        //otherwise\n          \"Some entries in this range are correct.\"\n      ),\n    assert(len(cells)=0, add_credit(range_credit*w, \"<strong>{name}:</strong> \"+message)); \n    range_credit\n  ),\n  [cells,w,name],\n  zip(range_cells, range_weights, keys(settings[\"mark_ranges\"]))\n)\n\nnotation_styles:\n[\"plain\",\"si-en\"]",
+    "marking_notes": [
+        {
+            "name": "correctAnswer",
+            "description": "<p>A spreadsheet representing the expected answer.</p>",
+            "definition": "settings[\"correct_answer\"]"
+        },
+        {
+            "name": "mark",
+            "description": "This is the main marking note. It should award credit and provide feedback based on the student's answer.",
+            "definition": "if(sum(mark_ranges)=0,\n  incorrect(),\n  apply(mark_ranges)\n)"
+        },
+        {
+            "name": "interpreted_answer",
+            "description": "A value representing the student's answer to this part.",
+            "definition": "studentAnswer"
+        },
+        {
+            "name": "range_cells",
+            "description": "<p>For each range to be marked, the addresses of the cells in that range.</p>",
+            "definition": "map(parse_range(ref),ref,values(settings[\"mark_ranges\"]))"
+        },
+        {
+            "name": "total_cells",
+            "description": "<p>The total number of cells to be marked. Cells in overlapping ranges will be counted once for each range they're in.</p>",
+            "definition": "len(flatten(range_cells))"
+        },
+        {
+            "name": "range_weights",
+            "description": "<p>The weight of each range, as a proportion of the available credit.</p>",
+            "definition": "switch(\n  settings[\"marking_method\"]=\"per_cell\",\n    map(len(r)/total_cells, r, range_cells),\n  // otherwise, mark per range\n    repeat(1/len(range_cells), len(range_cells))\n)"
+        },
+        {
+            "name": "mark_ranges",
+            "description": "<p>Mark each of the ranges specified by the question author.</p>",
+            "definition": "map(\n  let(\n    range_credit,\n      sum(map(\n        let(\n          correctCellString, correctAnswer[c],\n          correctCellNumber, parsenumber(correctCellString, notation_styles),\n          studentCellString, studentAnswer[c],\n          studentCellNumber, parsenumber(studentCellString, notation_styles),\n          award(\n            1/len(cells), \n            if(isnan(correctCellNumber) and correctCellString<>\"\",\n              lower(correctCellString) = lower(studentCellString),\n              abs(studentCellNumber - if(isnan(correctCellNumber),0,correctCellNumber)) <= settings[\"tolerance\"]\n            )\n          )\n        ),\n        c,\n        cells\n      )),\n    message,\n      switch(\n        range_credit=0,\n          if(len(cells)=1, \"This entry is incorrect.\", \"All entries in this range are incorrect.\"),\n        range_credit=1,\n          if(len(cells)=1, \"This entry is correct.\", \"All entries in this range are correct.\"),\n        //otherwise\n          \"Some entries in this range are correct.\"\n      ),\n    assert(len(cells)=0, add_credit(range_credit*w, \"<strong>{name}:</strong> \"+message)); \n    range_credit\n  ),\n  [cells,w,name],\n  zip(range_cells, range_weights, keys(settings[\"mark_ranges\"]))\n)"
+        },
+        {
+            "name": "notation_styles",
+            "description": "<p>Accepted number notation styles for a value in an individual cell.</p>",
+            "definition": "[\"plain\",\"si-en\"]"
+        }
+    ],
+    "settings": [
+        {
+            "name": "initial_sheet",
+            "label": "Initial sheet",
+            "help_url": "",
+            "hint": "A <code>spreadsheet</code> object giving the initial state of the sheet that the student should fill in.",
+            "input_type": "code",
+            "default_value": "",
+            "evaluate": true
+        },
+        {
+            "name": "correct_answer",
+            "label": "Correct answer",
+            "help_url": "",
+            "hint": "A <code>spreadsheet</code> object representing a correct answer to the part.",
+            "input_type": "code",
+            "default_value": "",
+            "evaluate": true
+        },
+        {
+            "name": "disable_ranges",
+            "label": "Ranges to disable",
+            "help_url": "",
+            "hint": "A list of cell or range references, denoting the cells that should not be editable.",
+            "input_type": "code",
+            "default_value": "[]",
+            "evaluate": true
+        },
+        {
+            "name": "mark_ranges",
+            "label": "Ranges to mark",
+            "help_url": "",
+            "hint": "A dictionary of cell or range references, mapping names to ranges of cells, denoting the cells that should be compared for equality with the expected answer.",
+            "input_type": "code",
+            "default_value": "dict()",
+            "evaluate": true
+        },
+        {
+            "name": "marking_method",
+            "label": "Marking method",
+            "help_url": "",
+            "hint": "",
+            "input_type": "dropdown",
+            "default_value": "per_cell",
+            "choices": [
+                {
+                    "value": "per_cell",
+                    "label": "Each cell has the same weight"
+                },
+                {
+                    "value": "per_range",
+                    "label": "Each range has the same weight"
+                }
+            ]
+        },
+        {
+            "name": "tolerance",
+            "label": "Allowed margin of error",
+            "help_url": "",
+            "hint": "",
+            "input_type": "code",
+            "default_value": "0",
+            "evaluate": true
+        }
+    ],
+    "public_availability": "always",
+    "published": true,
+    "extensions": [
+        "sheets"
+    ]
+}

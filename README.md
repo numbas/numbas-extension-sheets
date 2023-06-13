@@ -1,9 +1,5 @@
 # Numbas spreadsheets extension
 
-## To do
-
-* Add CPT definition to this git repo
-
 ## About
 
 This extension adds a data type, `spreadsheet`, representing a 2D grid of text cells with styling information, similar to a spreadsheet in a program such as Microsoft Excel.
@@ -15,6 +11,8 @@ Internally, [SheetJS](https://sheetjs.com/) is used to interpret spreadsheet fil
 When inserted into content areas, `spreadsheet` values are rendered as non-editable grids.
 
 This extension adds a "Spreadsheet" answer input method for custom part types. The "expected answer" and "initial sheet" settings should be `spreadsheet` values with the same dimensions.
+
+The file `spreadsheet.npt` defines a "Spreadsheet" custom part type which asks the student to enter values into a given spreadsheet and compares entries against a completed spreadsheet given by the question author.
 
 ## What it doesn't do
 
