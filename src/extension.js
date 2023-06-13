@@ -215,6 +215,8 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
                     ws[ref].v = value;
                 }
             }
+            const sheet_range = XLSX.utils.decode_range(ws['!ref']);
+            ws['!ref'] = XLSX.utils.encode_range({s: {c:Math.min(range.s.c, sheet_range.s.c), r: Math.min(range.s.r, sheet_range.s.r)}, e: {c:Math.max(range.e.c, sheet_range.e.c), r: Math.max(range.e.r, sheet_range.e.r)}});
             return wb;
         }
 
