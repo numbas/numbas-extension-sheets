@@ -200,7 +200,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
                 }
                 for(let col=range.s.c;col<=range.e.c;col++) {
                     const ref = this.find_corner(ws,XLSX.utils.encode_cell({r:row,c:col}));
-                    const value = row_values[col-range.s.c];
+                    let value = row_values[col-range.s.c];
                     if(value === undefined) {
                         continue;
                     }
@@ -209,7 +209,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
                     }
                     let t = 's';
                     if(typeof value == 'number') {
-                        t = 'n';
+                        value = Numbas.math.niceNumber(value);
                     }
                     ws[ref].t = t;
                     ws[ref].v = value;
