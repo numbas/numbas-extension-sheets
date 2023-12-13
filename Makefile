@@ -25,6 +25,6 @@ dist/sheet_element.js: dist/app.js src/sheet_element.js
 	echo "})" >> $@
 
 dist/app.js: src/Spreadsheet.elm $(ELMS)
-	-elm make $< --output=$@ 2> error.txt
+	-elm make --optimize $< --output=$@ 2> error.txt
 	@sed -i "s/;}(this));$$/;}(globalThis));\n\n/" $@ # Fix the compiled JS so it uses globalThis, allowing it to be used as a module file
 	@cat error.txt
