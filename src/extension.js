@@ -45,6 +45,10 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
                     this.first_change = true;
                     return;
                 }
+                if(this.setting) {
+                    this.setting = false;
+                    return;
+                }
                 this.changing = true;
                 const wb = this.options.initial_sheet.copy();
                 wb.replace_worksheet(e.detail.sheet);
@@ -70,6 +74,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
                 this.changing = false;
                 return;
             }
+            this.setting = true;
             this.sheet.load_worksheet(answerJSON.value.get_worksheet());
         }
 
