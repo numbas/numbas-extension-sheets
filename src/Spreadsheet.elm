@@ -281,6 +281,10 @@ view_cell context range cell =
             ]
 
         disabled = cell.disabled || context.disabled
+
+        inputmode = case cell.type_ of
+            NumberCell -> "numeric"
+            StringCell -> "text"
     in
         Html.td
             ( ((List.map (\(k,v) -> HA.style k v)) cell.style)
@@ -317,6 +321,7 @@ view_cell context range cell =
                         [ HA.value cell.content
                         , HE.onInput (SetValue (first range))
                         , HA.style "height" <| (fi (num_lines+1))++"em"
+                        , HA.attribute "inputmode" inputmode
                         ] 
                         ++
                         events

@@ -498,6 +498,14 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
     add_style_function('horizontal_alignment',['string'], (alignment) => { return {alignment: {horizontal: alignment}} });
     add_style_function('vertical_alignment',['string'], (alignment) => { return {alignment: {vertical: alignment}} });
 
+    sheets.scope.addFunction(new jme.funcObj('cell_type', ['string'], TDict, function(type) {
+        var types_map = {
+            'text': 's',
+            'number': 'n'
+        };
+        return jme.wrapValue({t: types_map[type] || type});
+    },{unwrapValues: true}));
+
     if(Numbas.editor?.register_variable_template_type !== undefined) {
         class SpreadsheetVariableTemplateWidget extends HTMLElement {
             static get observedAttributes() { return ['value']; }

@@ -149,3 +149,11 @@ Set the vertical alignment of text inside cells.
 Any value accepted by [the CSS `vertical-align` property](https://developer.mozilla.org/en-US/docs/Web/CSS/vertical-align) is understood.
 
 **Example:** `vertical_alignment("middle")`
+
+#### `cell_type(type)`
+
+Set the type of cells. Among other things, this determines which keyboard mode is displayed for touch-screen users.
+
+`type` can be `"text"` or `"number"`.
+
+**Example:** `cell_type("number")`
