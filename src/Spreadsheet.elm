@@ -697,7 +697,7 @@ encode_cell (range,cell) =
         , ("v", case cell.type_ of
                 NumberCell -> case String.toFloat cell.content of
                     Just n -> JE.float n
-                    Nothing -> JE.string "ERR"
+                    Nothing -> JE.string ""
                 StringCell -> JE.string cell.content
           )
         ]
