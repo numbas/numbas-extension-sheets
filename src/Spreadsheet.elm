@@ -549,12 +549,15 @@ decode_cell_style =
     , JD.field "alignment" decode_alignment_style
     ]
 
+border_sides : List String
+border_sides = ["top","bottom","left","right","diagonal"]
+
 decode_border_style : JD.Decoder CellStyle
 decode_border_style =
     (decode_any_of >> JD.map (List.concatMap identity))
         (List.map 
             (\side -> JD.field side (decode_border_side side))
-            ["top","bottom","left","right","diagonal"]
+            border_sides
         )
 
 decode_border_side : String -> JD.Decoder CellStyle
@@ -570,13 +573,17 @@ decode_border_side side =
         )
     |> JD.map (List.map (\(k,v) -> ("border-"++side++"-"++k, v)))
 
+border_sizes = Dict.fromList
+    [ ("thin", "0.1rem")
+    , ("medium", "0.2rem")
+    , ("thick", "0.3rem")
+    ]
+
 decode_border_size =
     JD.string
-    |> JD.andThen (\s -> case s of
-        "thin" -> JD.succeed "0.1rem"
-        "medium" -> JD.succeed "0.2rem"
-        "thick" -> JD.succeed "0.3rem"
-        _ -> JD.fail <| "Invalid border size: "++s
+    |> JD.andThen (\s -> case Dict.get s border_sizes of
+        Just size -> JD.succeed size
+        Nothing -> JD.fail <| "Invalid border size: "++s
        )
     |> JD.map (\s -> ("width",s))
 
@@ -692,15 +699,17 @@ coords_to_string (x,y) = (num_to_alpha (x))++(fi (y+1))
 encode_cell: (Range,CellContent) -> (String, JE.Value)
 encode_cell (range,cell) =
     ( coords_to_string <| first range
-    , JE.object
+    , JE.object <|
         [ ("t", encode_cell_type cell.type_)
         , ("v", case cell.type_ of
                 NumberCell -> case String.toFloat cell.content of
                     Just n -> JE.float n
                     Nothing -> JE.string ""
                 StringCell -> JE.string cell.content
-          )
+          ),
+          ("style", encode_cell_style cell.style)
         ]
+        ++(if cell.disabled then [("disabled", JE.bool True)] else [])
     )
 
 encode_cell_type : CellType -> JE.Value
@@ -708,3 +717,87 @@ encode_cell_type type_ = JE.string (case type_ of
     NumberCell -> "n"
     StringCell -> "s"
     )
+
+encode_cell_style : CellStyle -> JE.Value
+encode_cell_style style =
+    JE.object <|
+           (encode_border_style style)
+        ++ (encode_font_style style)
+        ++ (encode_fill_style style)
+        ++ (encode_alignment_style style)
+
+encode_color color = JE.object [ ("css", JE.string color) ]
+
+encode_border_style : CellStyle -> List (String, JE.Value)
+encode_border_style style =
+    let
+        style_dict = Dict.fromList style
+    in
+        border_sides |>
+        List.map
+            (\side ->
+                ( side, 
+                  case (Dict.get ("border-"++side++"-width") style_dict, Dict.get ("border-"++side++"-color") style_dict) of
+                    (Just width, Just color) -> 
+                        JE.object
+                            [ ("style", encode_border_width width)
+                            , ("color", encode_color color )
+                            ]
+                    (Just width, Nothing) ->
+                        JE.object
+                            [ ("style", encode_border_width width)
+                            ]
+                    (Nothing, Just color) ->
+                        JE.object
+                            [ ("color", encode_color color )
+                            ]
+                    (Nothing, Nothing) ->
+                        JE.null
+                )
+            )
+        |> List.filter (\(k,v) -> v /= JE.null)
+        |> (\styles -> 
+            if styles == [] then
+                []
+            else
+                [("border", JE.object styles)]
+           )
+
+inverse_border_sizes = border_sizes |> Dict.toList |> List.map (\(a,b) -> (b,a)) |> Dict.fromList
+
+encode_border_width : String -> JE.Value
+encode_border_width size = case Dict.get size inverse_border_sizes of
+    Just s -> JE.string s
+    Nothing -> JE.null
+
+encode_styles : List (String, String -> (String, JE.Value)) -> CellStyle -> List (String, JE.Value)
+encode_styles mappings style =
+    let
+        style_dict = Dict.fromList style
+    in
+        List.filterMap (\(key,map) -> Dict.get key style_dict |> Maybe.map map) mappings
+
+encode_font_style : CellStyle -> List (String, JE.Value)
+encode_font_style =
+       encode_styles
+        [ ("font-family", \f -> ("name", JE.string f))
+        , ("font-size", String.dropRight 2 >> String.toFloat >> Maybe.withDefault 1 >> (*) 11 >> JE.float >> Tuple.pair "sz")
+        , ("font-style", \_ -> ("italic", JE.bool True))
+        , ("font-weight", \_ -> ("bold", JE.bool True))
+        , ("text-decoration", \_ -> ("underline", JE.bool True))
+        , ("color", \c -> ("color", encode_color c))
+        ]
+    >> \styles -> [("font", JE.object styles)]
+
+encode_fill_style = 
+    encode_styles
+        [ ("background-color", \c -> ("fgColor", encode_color c))
+        ]
+    >> \styles -> [("fill", JE.object styles)]
+
+encode_alignment_style = 
+    encode_styles
+        [ ("text-align", \c -> ("horizontal", JE.string c))
+        , ("vertical-align", \c -> ("vertical", JE.string c))
+        ]
+    >> \styles -> [("alignment", JE.object styles)]
