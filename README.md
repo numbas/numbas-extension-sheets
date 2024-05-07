@@ -31,6 +31,14 @@ Construct a spreadsheet object from a 2D array of cell contents.
 Construct a spreadsheet from a `.xlsx` file whose contents have been encoded in base64. 
 This function is used by the "spreadsheet" variable template type; it's unlikely you'll ever use it in any other context.
 
+### `download_sheet(sheet, filename)`
+
+Create a link to download a spreadsheet, using the given filename.
+
+Note that due to a limitation in the library used to create the file, any cell formatting is omitted in the downloaded file.
+
+**Example:** `download_sheet(sheet, "data.xlsx")`
+
 ### `update_range(spreadsheet, range, changes)`
 
 Update the cells in the given range, following the settings in the dictionary `changes`.

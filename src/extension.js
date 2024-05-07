@@ -258,6 +258,8 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
 
     }
 
+    const {TString, TList, TDict, THTML} = Numbas.jme.types;
+
     class TSpreadsheet {
         constructor(wb) {
             this.value = wb;
@@ -296,8 +298,6 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             return 'spreadsheet()';
         }
     });
-
-    const {TString, TList, TDict} = Numbas.jme.types;
 
     sheets.scope.addFunction(new jme.funcObj('spreadsheet',['list of list'],TSpreadsheet, 
         (content) => {
@@ -432,6 +432,38 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
 
     sheets.scope.addFunction(new jme.funcObj('encode_range',['integer','integer','integer','integer'], TString, (cs,rs,ce,re) => {
         return XLSX.utils.encode_range({s:{c:cs,r:rs}, e:{c:ce,r:re}});
+    }));
+
+    /** 
+     * Create an ArrayBuffer containing the given string.
+     *
+     * @param {string} s
+     * @returns ArrayBuffer
+     */
+    function string_to_buffer(str) {
+        const buf = new ArrayBuffer(str.length);
+        const view = new Uint8Array(buf);
+        for (let i = 0; i < str.length; i++) {
+            view[i] = str.charCodeAt(i) & 0xFF;
+        }
+        return buf;
+    }
+    
+    sheets.scope.addFunction(new jme.funcObj('download_sheet', [TSpreadsheet, TString], THTML, (sheet, filename) => {
+        const {wb} = sheet;
+
+        var wbout = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+
+        const blob = new Blob(wbout, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.download = filename;
+        link.innerHTML = `Download <code>${filename}</code>`;
+
+        return link;
     }));
 
     function add_style_function(name,args,fn) {
