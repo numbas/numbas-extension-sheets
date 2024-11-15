@@ -1,5 +1,5 @@
 DIRNAME=$(notdir $(CURDIR))
-EDITOR_EXTENSION_PATH = ~/numbas/editor/media/user-extensions/extracted/1/sheets
+EDITOR_EXTENSION_PATH = ~/numbas/editor/media/user-extensions/extracted/47/sheets
 
 ELMS=$(wildcard src/*.elm)
 

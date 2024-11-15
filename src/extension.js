@@ -299,6 +299,18 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         }
     });
 
+    sheets.scope.addFunction(new jme.funcObj('spreadsheet',[],TSpreadsheet, 
+        (content) => {
+            const sheet = XLSX.utils.aoa_to_sheet([['']]);
+            const workbook = {
+                Sheets: { 'Sheet1': sheet },
+                SheetNames: ['Sheet1']
+            };
+            return new TSpreadsheet(new Workbook(workbook));
+        },
+        { unwrapValues: true}
+    ));
+
     sheets.scope.addFunction(new jme.funcObj('spreadsheet',['list of list'],TSpreadsheet, 
         (content) => {
             const sheet = XLSX.utils.aoa_to_sheet(content);
