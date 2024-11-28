@@ -466,7 +466,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
 
         var wbout = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
 
-        const blob = new Blob(wbout, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
 
         const link = document.createElement('a');
