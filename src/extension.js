@@ -106,8 +106,15 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         scorm_storage: {
             interaction_type: function(part) { return 'fill-in'; },
             correct_answer: function(part) { return part.input_options().correctAnswer; },
-            student_answer: function(part) { return part.studentAnswer; },
-            load: function(part, data) { return data.answer; }
+            student_answer: function(part) { return part.studentAnswer ? JSON.stringify(part.studentAnswer.wb) : ''; },
+            load: function(part, data) { 
+                if(data.answer) {
+                    const wb = JSON.parse(data.answer);
+                    return new Workbook(wb);
+                } else {
+                    return undefined;
+                }
+            }
         }
     });
 
