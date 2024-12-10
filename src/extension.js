@@ -263,6 +263,10 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             return sheet[ref]?.v;
         }
 
+        to_base64() {
+            const buffer = XLSX.write(this.wb, {type: 'array', bookType: 'xlsx'});
+            return encode_array(buffer);
+        }
     }
 
     const {TString, TList, TDict, THTML} = Numbas.jme.types;
@@ -277,9 +281,6 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         TSpreadsheet,
         'spreadsheet',
         {
-            'list': function(s) {
-                // TODO
-            },
             'html': function(s) {
                 const e = document.createElement('spread-sheet');
                 e.setAttribute('disabled',true);
@@ -301,8 +302,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             return '\\text{Spreadsheet}';
         },
         jme: (tree,tok,bits) => {
-            // TODO
-            return 'spreadsheet()';
+            return 'spreadsheet_from_base64_file("sheet.xlsx",safe("' + Numbas.jme.escape(tok.value.to_base64())+'"))';
         }
     });
 
@@ -315,7 +315,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             };
             return new TSpreadsheet(new Workbook(workbook));
         },
-        { unwrapValues: true}
+        { unwrapValues: true, random: false }
     ));
 
     sheets.scope.addFunction(new jme.funcObj('spreadsheet',['list of list'],TSpreadsheet, 
@@ -327,7 +327,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             };
             return new TSpreadsheet(new Workbook(workbook));
         },
-        { unwrapValues: true}
+        { unwrapValues: true, random: false }
     ));
 
     sheets.scope.addFunction(new jme.funcObj('spreadsheet_from_base64_file', ['string', 'string'], TSpreadsheet,
@@ -335,14 +335,14 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             const data = decode_array(base64);
             return new TSpreadsheet(new Workbook(XLSX.read(data, {sheetStubs: true})));
         },
-        { unwrapValues: true }
-    ))
+        { unwrapValues: true, random: false }
+    ));
 
     sheets.scope.addFunction(new jme.funcObj('update_range',[TSpreadsheet,TString,TDict], TSpreadsheet,
         (spreadsheet, range_string, changes) => {
             return new TSpreadsheet(spreadsheet.update_range(range_string, changes));
         },
-        {unwrapValues: true}
+        { unwrapValues: true, random: false }
     ));
 
     sheets.scope.addFunction(new jme.funcObj('update_range',[TSpreadsheet,'list of string',TDict], TSpreadsheet,
@@ -353,7 +353,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             }
             return new TSpreadsheet(wb);
         },
-        {unwrapValues: true}
+        { unwrapValues: true, random: false }
     ));
 
     sheets.scope.addFunction(new jme.funcObj('disable_cells',[TSpreadsheet,'list of string'], TSpreadsheet,
@@ -364,7 +364,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             }
             return new TSpreadsheet(wb);
         },
-        {unwrapValues: true}
+        { unwrapValues: true, random: false }
     ));
 
     sheets.scope.addFunction(new jme.funcObj('fill_range',[TSpreadsheet, TString, 'list of (string or number)'], TSpreadsheet,
@@ -379,13 +379,13 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             }
             return new TSpreadsheet(spreadsheet.fill_range(range,values));
         },
-        {unwrapValues: true}
+        { unwrapValues: true, random: false }
     ));
     sheets.scope.addFunction(new jme.funcObj('fill_range',[TSpreadsheet,TString,'list of list of (string or number)'], TSpreadsheet,
         (spreadsheet, range, values) => {
             return new TSpreadsheet(spreadsheet.fill_range(range,values));
         },
-        {unwrapValues: true}
+        { unwrapValues: true, random: false }
     ));
 
     /** Interpret a range string and return a list of the cells it contains.
@@ -400,12 +400,13 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
                 }
             }
             return out;
-        }
+        },
+        { random: false }
     ));
 
     sheets.scope.addFunction(new jme.funcObj('slice', [TSpreadsheet, TString], TSpreadsheet, (wb,range) => {
         return wb.slice(range);
-    }));
+    }, {random: false}));
 
     sheets.scope.addFunction(new jme.funcObj('listval', [TSpreadsheet, TString], '?', null, {
         evaluate: function(args, scope) {
@@ -446,12 +447,13 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             } else {
                 return new TString((wb.get_cell_value(sheet,ref) || '')+'');
             }
-        }
+        },
+        random: false
     }));
 
     sheets.scope.addFunction(new jme.funcObj('encode_range',['integer','integer','integer','integer'], TString, (cs,rs,ce,re) => {
         return XLSX.utils.encode_range({s:{c:cs,r:rs}, e:{c:ce,r:re}});
-    }));
+    }, {random: false}));
 
     /** 
      * Create an ArrayBuffer containing the given string.
@@ -483,21 +485,21 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         link.innerHTML = `Download <code>${filename}</code>`;
 
         return link;
-    }));
+    }, {random: false}));
 
     function add_style_function(name,args,fn) {
         args = args.slice();
         sheets.scope.addFunction(new jme.funcObj(name, args, TDict, function(...args) {
             var style = fn(...args);
             return jme.wrapValue({style: style});
-        },{unwrapValues: true}));
+        },{unwrapValues: true, random: false}));
 
         var dargs = args.slice();
         dargs.splice(0,0,'dict');
         sheets.scope.addFunction(new jme.funcObj(name, dargs, TDict, function(pd,...args) {
             var style = fn(...args);
             return jme.wrapValue(Numbas.util.deep_extend_object(pd,{style: style}));
-        },{unwrapValues: true}));
+        },{unwrapValues: true, random: false}));
     }
 
     function css_color_to_rgba(color) {
@@ -555,7 +557,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             'number': 'n'
         };
         return jme.wrapValue({t: types_map[type] || type});
-    },{unwrapValues: true}));
+    },{unwrapValues: true, random: false}));
 
     if(Numbas.editor?.register_variable_template_type !== undefined) {
         class SpreadsheetVariableTemplateWidget extends HTMLElement {
