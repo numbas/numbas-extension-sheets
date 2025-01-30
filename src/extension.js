@@ -275,7 +275,49 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
         constructor(wb) {
             this.value = wb;
         }
-    }
+
+        /** Resolve a named reference or a string representation of a range to a 2D array of values or the value in a single cell.
+         *
+         * @param {string} ref
+         * @returns {object} with either a property `range: Array.<Array.<string>>>` or `cell: string`
+         */
+        resolve_ref(ref) {
+            const wb = this.value;
+            let range;
+
+            const named_ref = wb.get_named_ref(ref);
+            if(named_ref) {
+                range = XLSX.utils.dereference_range(named_ref);
+                if(cells_equal(range.e,range.s)) {
+                    delete range.e;
+                }
+                if(range.e === undefined) {
+                    ref = XLSX.utils.encode_cell(range.s);
+                }
+            } else if(ref.match(/:/)) {
+                range = XLSX.utils.decode_range(ref);
+            } else {
+                range = {s:XLSX.utils.decode_cell(ref)};
+            }
+
+            const sheet = wb.get_worksheet(range.sheet);
+
+            if(range.e !== undefined) {
+                const out = [];
+                for(let row=range.s.r; row<=range.e.r; row++) {
+                    const orow = [];
+                    out.push(orow);
+                    for(let col=range.s.c; col<=range.e.c; col++) {
+                        const v = wb.get_cell_value(sheet, XLSX.utils.encode_cell({r:row,c:col}));
+                        orow.push((v || '')+'');
+                    }
+                }
+                return {range: out};
+            } else {
+                return {cell: (wb.get_cell_value(sheet,ref) || '')+''};
+            }
+        }
+    };
     
     jme.registerType(
         TSpreadsheet,
@@ -410,42 +452,33 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
 
     sheets.scope.addFunction(new jme.funcObj('listval', [TSpreadsheet, TString], '?', null, {
         evaluate: function(args, scope) {
-            const wb = args[0].value;
-            let ref = args[1].value;
-            let range;
-
-            const named_ref = wb.get_named_ref(ref);
-            if(named_ref) {
-                range = XLSX.utils.dereference_range(named_ref);
-                if(cells_equal(range.e,range.s)) {
-                    delete range.e;
-                }
-                if(range.e === undefined) {
-                    ref = XLSX.utils.encode_cell(range.s);
-                }
-            } else if(ref.match(/:/)) {
-                range = XLSX.utils.decode_range(ref);
-            } else {
-                range = {s:XLSX.utils.decode_cell(ref)};
+            const sheet = args[0];
+            const ref = args[1].value;
+            const result = sheet.resolve_ref(ref);
+            if(result.range) {
+                return jme.wrapValue(result.range);
+            } else if(result.cell) {
+                return new TString(result.cell);
             }
+        },
+        random: false
+    }));
 
-            
-            const sheet = wb.get_worksheet(range.sheet);
+    sheets.scope.addFunction(new jme.funcObj('range_as_numbers', [TSpreadsheet, TString, '[string or list of string]'], '?', null, {
+        evaluate: function(args, scope) {
+            const sheet = args[0];
+            const ref = args[1].value;
+            const notationStyle = jme.unwrapValue(args[2]);
 
+            const result = sheet.resolve_ref(ref);
 
-            if(range.e !== undefined) {
-                const out = [];
-                for(let row=range.s.r; row<=range.e.r; row++) {
-                    const orow = [];
-                    out.push(new TList(orow));
-                    for(let col=range.s.c; col<=range.e.c; col++) {
-                        const v = wb.get_cell_value(sheet, XLSX.utils.encode_cell({r:row,c:col}));
-                        orow.push(new TString((v || '')+''));
-                    }
-                }
-                return new TList(out);
-            } else {
-                return new TString((wb.get_cell_value(sheet,ref) || '')+'');
+            function parsenumber(s) {
+                return Numbas.util.parseNumber(s, false, notationStyle, true);
+            }
+            if(result.range) {
+                return jme.wrapValue(result.range.map(row => row.map(parsenumber)));
+            } else if(result.cell) {
+                return new TNum(parsenumber(result.cell));
             }
         },
         random: false

@@ -86,6 +86,24 @@ The empty string is used for empty cells.
 * `sheet["A1:B3"]` → `[["a","b"],["1","2"],["","3"]]`
 * `sheet["A1"]` → `"a"`
 
+### `range_as_numbers(spreadsheet, range, styles)`
+
+Get the contents of the cells in the given range, parsed as numbers in the same way as the JME `parsenumber` function.
+
+**Examples:**
+
+The following examples use this spreadsheet:
+
+<table>
+<tr><td>a</td><td>b</td></tr>
+<tr><td>1</td><td>2e2</td></tr>
+<tr><td></td><td>3</td></tr>
+</table>
+
+* `range_as_numbers(sheet,"A1:B3","plain")` → `[[NaN,NaN], [1,NaN], [NaN,3]]`
+* `range_as_numbers(sheet,"A1:B3",["plain", "scientific"])` → `[[NaN,NaN], [1,200], [NaN,3]]`
+* `range_as_numbers(sheet,"A2","plain")` → `1`
+
 ### `encode_range(start_column, start_row, end_column, end_row)`
 
 Given the numerical indices of the top-left and bottom-right corners of a range, return a string representing that range.
