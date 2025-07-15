@@ -1,5 +1,5 @@
 import show_error from './show-error.mjs';
-import './dist/app.js';
+import './lib/app.js';
 import './src/sheet_element.js';
 
 async function init_app() {

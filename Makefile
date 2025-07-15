@@ -11,7 +11,7 @@ $(EDITOR_EXTENSION_PATH)/sheets.js: dist/sheets.js
 dist/sheets.js: src/extension.js lib/sheet_element.js lib/xlsx.js
 	cat $^ > $@
 
-$(EDITOR_EXTENSION_PATH)/style.css: style.css
+$(EDITOR_EXTENSION_PATH)/style.css: dist/style.css
 	cp $^ $@
 
 lib/xlsx.js: src/xlsx.js
