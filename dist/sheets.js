@@ -457,7 +457,7 @@ Numbas.addExtension('sheets', ['display', 'util', 'jme','sheet-element', 'xlsx']
             const result = sheet.resolve_ref(ref);
             if(result.range) {
                 return jme.wrapValue(result.range);
-            } else if(result.cell) {
+            } else if(result.cell !== undefined) {
                 return new TString(result.cell);
             }
         },
